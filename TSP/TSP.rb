@@ -1,3 +1,6 @@
+require 'benchmark'
+require 'timeout'
+
 class TSP
   def initialize
     @graph = []
@@ -17,6 +20,67 @@ class TSP
     end
   end
 
+  def brute_force_tsp
+    nodes = (0...@nodes_quantity).to_a      # array de 0 até quantidade de nós
+    nodes_permutations = nodes.permutation
+    
+    optimal_cost = Float::INFINITY
+    optimal_path = []
+    time = nil
+    
+    begin
+      Timeout.timeout(300) do
+        time = Benchmark.realtime do
+          nodes_permutations.each do |path|
+            cost = calculate_path(path)
+            if cost < optimal_cost
+              optimal_cost = cost
+              optimal_path = path
+            end
+          end
+        end
+  
+        print_results(optimal_path, optimal_cost, time)
+      end
+    rescue Timeout::Error
+      puts "Tempo limite de execução atingido (#{300} segundos)."
+      return
+    end
+    
+    print_results(optimal_path, optimal_cost, time)
+    { path: optimal_path, cost: optimal_cost }
+  end
+
+  def held_karp_tsp
+    nodes = (0...@nodes_quantity).to_a  
+    starting_node = 0 
+             
+    memo = Array.new(@nodes_quantity) { Array.new(2**@nodes_quantity, nil) }
+  end
+  
+  
+  #heurística
+  def nearest_neighbor_tsp(starting_node = 0, optimal_cost)
+    current_node = starting_node
+    unvisited_nodes = (0...@nodes_quantity).to_a - [current_node] # excluindo o current_node que no caso vai ser o starting_node na primeira iteração
+    
+    path = [current_node] # começando do current_node // aqui vai ser o starting node
+
+    time = Benchmark.realtime do
+      while unvisited_nodes.any?
+        nearest_node = find_nearest_neighbor(current_node, unvisited_nodes)
+        path << nearest_node
+        unvisited_nodes.delete(nearest_node)
+        current_node = nearest_node
+      end
+    end
+
+    cost = calculate_path(path)
+    print_results(path, cost, time, optimal_cost)
+
+    { path: path, cost: cost }
+  end
+  
   def print_graph
     puts "------------------------"
     @graph.each do |row|
@@ -25,76 +89,21 @@ class TSP
     puts "------------------------"
   end
   
-  def brute_force_tsp
-    nodes = (0...@nodes_quantity).to_a      # array de 0 até quantidade de nós
-    nodes_permutations = nodes.permutation
-    
-    optimal_cost = Float::INFINITY
-    optimal_path = []
-    
-    nodes_permutations.each do |path|       # .permutation gera todas permutações possiveis do array de 
-      cost = calculate_path(path)
-      if cost < optimal_cost
-        optimal_cost = cost
-        optimal_path = path
-      end
-    end
-    
-    puts "Brute force TSP optimal path: #{optimal_path.join(' -> ')}"
-    puts "Brute force TSP optimal cost: #{optimal_cost}"
-
-    { route: optimal_path, cost: optimal_cost }
-  end
-
-
-  
-  def held_karp_tsp
-    nodes = (0...@nodes_quantity).to_a  
-    starting_node = 0 
-             
-    
-    memo = Array.new(@nodes_quantity) { Array.new(2**@nodes_quantity, nil) }
-    
-  end
-  
-  def nearest_neighbor_tsp(starting_node = 0)
-    current_node = starting_node
-    unvisited_nodes = (0...@nodes_quantity).to_a - [current_node] # excluindo o current_node que no caso vai ser o starting_node na primeira iteração
-    
-    path = [current_node] # começando do current_node // aqui vai ser o starting node
-
-    nearest_node = find_nearest_neighbor(current_node, unvisited_nodes)
-    
-    while unvisited_nodes.any?
- 
-    end
-
-  end
-  
-  def find_nearest_neighbor(current_node, unvisited_nodes) 
-    #vai retornar o nó com menor caminho entre o current_node para o unvisited_nodes
-    min_distance = Float::INFINITY
-    nearest_node = nil
-  
-    unvisited_nodes.each do |unvisited_node|
-      distance = self.get_distance_between_two_nodes(current_node, unvisited_node)
-      if distance < min_distance
-        min_distance = distance
-        nearest_node = unvisited_node
-      end
-    end
-    
-    puts nearest_node
-  
-    nearest_node
-  end
-  
-  def get_distance_between_two_nodes(first_node, second_node) 
-    puts "Distancia do #{first_node} pro #{second_node} => #{@graph[first_node][second_node]}"
-    return @graph[first_node][second_node]
-  end
-  
   private
+  
+  def print_results(path, cost, time, optimal_cost = nil)
+    puts " "
+    puts " "
+    puts "Path: #{path.join(' -> ')}"
+    puts "Cost: #{cost}"
+    puts "Execution time: #{time.round(5)} seconds"
+    if optimal_cost
+      ratio = cost.to_f / optimal_cost.to_f
+      puts "#{ratio.round(2)}-aproximado"
+    end
+    puts " "
+    
+  end
 
   def calculate_path(path)
     # path = array com a permutação atual dos nós (ordem que os nós vão ser visitados)
@@ -111,12 +120,24 @@ class TSP
     total_cost
   end
   
-
+  def find_nearest_neighbor(current_node, unvisited_nodes) 
+    #vai retornar o nó com menor caminho entre o current_node para o unvisited_nodes
+    min_distance = Float::INFINITY
+    nearest_node = nil
+  
+    unvisited_nodes.each do |unvisited_node|
+      distance = self.get_distance_between_two_nodes(current_node, unvisited_node)
+      if distance < min_distance
+        min_distance = distance
+        nearest_node = unvisited_node
+      end
+    end
+    
+    nearest_node
+  end
+    
+  def get_distance_between_two_nodes(first_node, second_node) 
+    return @graph[first_node][second_node]
+  end
   
 end
-
-tsp = TSP.new
-tsp.read_file("./TSP/resources/tsp1_253.txt") # custo ótimo é 253
-# tsp.read_file("./TSP/resources/tsp_exemplo.txt") # custo ótimo é 253
-# result = tsp.brute_force_tsp
-tsp.nearest_neighbor_tsp
