@@ -21,7 +21,7 @@ class TSP
   end
 
   def brute_force_tsp
-    nodes = (0...@nodes_quantity).to_a      # array de 0 até quantidade de nós
+    nodes = (0...@nodes_quantity).to_a      
     nodes_permutations = nodes.permutation
     
     optimal_cost = Float::INFINITY
@@ -29,7 +29,7 @@ class TSP
     time = nil
     
     begin
-      Timeout.timeout(300) do
+      Timeout.timeout(600) do
         time = Benchmark.realtime do
           nodes_permutations.each do |path|
             cost = calculate_path(path)
@@ -39,11 +39,9 @@ class TSP
             end
           end
         end
-  
-        print_results(optimal_path, optimal_cost, time)
       end
     rescue Timeout::Error
-      puts "Tempo limite de execução atingido (#{300} segundos)."
+      puts "Tempo limite de execução atingido (10 minutos)."
       return
     end
     
@@ -51,20 +49,11 @@ class TSP
     { path: optimal_path, cost: optimal_cost }
   end
 
-  def held_karp_tsp
-    nodes = (0...@nodes_quantity).to_a  
-    starting_node = 0 
-             
-    memo = Array.new(@nodes_quantity) { Array.new(2**@nodes_quantity, nil) }
-  end
-  
-  
-  #heurística
   def nearest_neighbor_tsp(starting_node = 0, optimal_cost)
     current_node = starting_node
-    unvisited_nodes = (0...@nodes_quantity).to_a - [current_node] # excluindo o current_node que no caso vai ser o starting_node na primeira iteração
+    unvisited_nodes = (0...@nodes_quantity).to_a - [current_node] 
     
-    path = [current_node] # começando do current_node // aqui vai ser o starting node
+    path = [current_node] 
 
     time = Benchmark.realtime do
       while unvisited_nodes.any?
@@ -74,8 +63,9 @@ class TSP
         current_node = nearest_node
       end
     end
-
+    
     cost = calculate_path(path)
+    path << starting_node
     print_results(path, cost, time, optimal_cost)
 
     { path: path, cost: cost }
@@ -87,6 +77,43 @@ class TSP
       puts row.join(" - ")
     end
     puts "------------------------"
+  end
+  
+  def prim(starting_node)
+    mst = []       # Array com os nós MST
+    visited = []   # Nós já visitados
+    queue = []     # Fila
+
+    queue.push({ node: start, weight: 0 })  # Nó de partida
+
+    while !queue.empty?
+      queue.sort_by! { |path| path[:weight] }  # Ordena pelo peso, aqui sempre vai pegar a aresta de menor peso
+
+      min_path = queue.shift                   # Pegando a aresta de menor peso
+      current_node_key = min_path[:node]
+      current_node_weight = min_path[:weight]
+
+      next if visited.include?(current_node_key)  # Nó já foi visitado? Vai embora
+      visited.push(current_node_key)
+
+      mst.push(current_node_key)          # Já pode dar o push para o MST, porque se chegou nesse nó, ele já faz parte
+
+      @graph[current_node_key].each_with_index do |weight, neighbor|
+        next if weight.zero? || visited.include?(neighbor)
+
+        queue.push({ node: neighbor, weight: weight })
+      end
+    end
+
+    cost = calculate_path(mst)
+    { mst_path: mst, cost: cost }
+  end
+  
+  def tsp_path(staring_node = 0)
+    mst_response = prim(starting_node)
+    mst_reponse[:mst_path] << staring_node 
+    
+    cal
   end
   
   private
@@ -106,17 +133,13 @@ class TSP
   end
 
   def calculate_path(path)
-    # path = array com a permutação atual dos nós (ordem que os nós vão ser visitados)
-    
     total_cost = 0
+
     (0...@nodes_quantity - 1).each do |i|
-      # Exemplo do que preciso fazer aqui:
-      # path = [0, 1, 3, 4]
-      # pegar no graph custo pra ir do 0 -> 1, na proxima iteração do 1 -> 2...
-      
       total_cost += @graph[path[i]][path[i + 1]] 
     end
-    total_cost += @graph[path.last][path.first] # adicionando o custo de ir do ultimo nó pro primeiro
+    total_cost += @graph[path.last][path.first] 
+
     total_cost
   end
   
@@ -141,3 +164,7 @@ class TSP
   end
   
 end
+
+tsp = TSP.new 
+tsp.read_file("./TSP/resources/tsp1_253.txt")
+result = tsp.tsp_path

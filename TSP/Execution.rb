@@ -1,6 +1,6 @@
 require_relative 'tsp'
 
-class Execution
+class Execution2
   def initialize
     @tsp = TSP.new
   end
