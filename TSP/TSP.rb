@@ -139,7 +139,7 @@ end
   def print_results(path, cost, time, optimal_cost = nil)
     puts " "
     puts " "
-    # puts "Path: #{path.join(' -> ')}"
+    puts "Path: #{path.join(' -> ')}"
     puts "Cost: #{cost}"
     puts "Execution time: #{(time * 1000).round(5)} milliseconds"
     if optimal_cost
@@ -188,6 +188,5 @@ end
 end
 
 # tsp = TSP.new 
-# tsp.read_file("./TSP/resources/tsp5_27603.txt")
-# result = tsp.average_nearest_neighbor_tsp(50000)
-# tsp.print_results(nil, result[:average_cost], result[:average_time], 27603 )
+# tsp.read_file("./TSP/resources/tsp2_1248.txt")
+# tsp.average_nearest_neighbor_tsp(50000)
