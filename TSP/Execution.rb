@@ -1,6 +1,6 @@
 require_relative 'tsp'
 
-class Execution2
+class Execution
   def initialize
     @tsp = TSP.new
   end
@@ -58,7 +58,7 @@ class Execution2
         @tsp.brute_force_tsp
       when '2'
         clear_console
-         @tsp.nearest_neighbor_tsp(0, optimal_cost)
+         @tsp.nearest_neighbor_tsp(optimal_cost)
       when '3'
         break
       else

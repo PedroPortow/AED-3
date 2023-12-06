@@ -49,27 +49,30 @@ class TSP
     { path: optimal_path, cost: optimal_cost }
   end
 
-  def nearest_neighbor_tsp(starting_node = 0, optimal_cost)
-    current_node = starting_node
-    unvisited_nodes = (0...@nodes_quantity).to_a - [current_node] 
-    
-    path = [current_node] 
+  def nearest_neighbor_tsp(optimal_cost)
+  unvisited_nodes = (0...@nodes_quantity).to_a
 
-    time = Benchmark.realtime do
-      while unvisited_nodes.any?
-        nearest_node = find_nearest_neighbor(current_node, unvisited_nodes)
-        path << nearest_node
-        unvisited_nodes.delete(nearest_node)
-        current_node = nearest_node
-      end
+  starting_node = unvisited_nodes.sample
+  current_node = starting_node
+  unvisited_nodes.delete(starting_node)
+
+  path = [current_node]
+  
+  time = Benchmark.realtime do
+    while unvisited_nodes.any?
+      nearest_node = find_nearest_neighbor(current_node, unvisited_nodes)
+      path << nearest_node
+      unvisited_nodes.delete(nearest_node)
+      current_node = nearest_node
     end
-    
-    cost = calculate_path(path)
-    path << starting_node
-    print_results(path, cost, time, optimal_cost)
-
-    { path: path, cost: cost }
   end
+  
+  cost = calculate_path(path)
+  path << starting_node
+  print_results(path, cost, time, optimal_cost)
+
+  { path: path, cost: cost, time: time }
+end
   
   def print_graph
     puts "------------------------"
@@ -80,23 +83,23 @@ class TSP
   end
   
   def prim(starting_node)
-    mst = []       # Array com os nós MST
-    visited = []   # Nós já visitados
-    queue = []     # Fila
+    mst = []      
+    visited = []   
+    queue = []    
 
-    queue.push({ node: start, weight: 0 })  # Nó de partida
+    queue.push({ node: start, weight: 0 }) 
 
     while !queue.empty?
-      queue.sort_by! { |path| path[:weight] }  # Ordena pelo peso, aqui sempre vai pegar a aresta de menor peso
+      queue.sort_by! { |path| path[:weight] }  
 
-      min_path = queue.shift                   # Pegando a aresta de menor peso
+      min_path = queue.shift                   
       current_node_key = min_path[:node]
       current_node_weight = min_path[:weight]
 
-      next if visited.include?(current_node_key)  # Nó já foi visitado? Vai embora
+      next if visited.include?(current_node_key)  # ja foi visitado? sai
       visited.push(current_node_key)
 
-      mst.push(current_node_key)          # Já pode dar o push para o MST, porque se chegou nesse nó, ele já faz parte
+      mst.push(current_node_key)         
 
       @graph[current_node_key].each_with_index do |weight, neighbor|
         next if weight.zero? || visited.include?(neighbor)
@@ -112,18 +115,33 @@ class TSP
   def tsp_path(staring_node = 0)
     mst_response = prim(starting_node)
     mst_reponse[:mst_path] << staring_node 
-    
-    cal
   end
   
-  private
+  def average_nearest_neighbor_tsp(n)
+    total_cost = 0
+    total_time = 0
+  
+    n.times do |i|
+      puts "Run #{i + 1}:"
+      result = nearest_neighbor_tsp(nil)
+      total_cost += result[:cost]
+      total_time += result[:time]
+      puts "------------------------"
+    end
+  
+    average_cost = total_cost / n
+    average_time_ms = (total_time / n * 1000).round(5)
+    puts "Average Cost: #{average_cost}"
+    puts "Average Execution Time: #{average_time_ms} milliseconds"
+    { average_cost: average_cost, average_time: average_time_ms }
+  end
   
   def print_results(path, cost, time, optimal_cost = nil)
     puts " "
     puts " "
-    puts "Path: #{path.join(' -> ')}"
+    # puts "Path: #{path.join(' -> ')}"
     puts "Cost: #{cost}"
-    puts "Execution time: #{time.round(5)} seconds"
+    puts "Execution time: #{(time * 1000).round(5)} milliseconds"
     if optimal_cost
       ratio = cost.to_f / optimal_cost.to_f
       puts "#{ratio.round(2)}-aproximado"
@@ -131,6 +149,10 @@ class TSP
     puts " "
     
   end
+  
+  private
+  
+
 
   def calculate_path(path)
     total_cost = 0
@@ -165,6 +187,7 @@ class TSP
   
 end
 
-tsp = TSP.new 
-tsp.read_file("./TSP/resources/tsp1_253.txt")
-result = tsp.tsp_path
+# tsp = TSP.new 
+# tsp.read_file("./TSP/resources/tsp5_27603.txt")
+# result = tsp.average_nearest_neighbor_tsp(50000)
+# tsp.print_results(nil, result[:average_cost], result[:average_time], 27603 )
