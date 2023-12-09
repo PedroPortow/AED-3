@@ -56,7 +56,7 @@ class Execution
       case tsp_choice
       when '1'
         clear_console
-        @tsp.brute_force_tsp
+        @tsp.brute_force_tsp(1000000)
       when '2'
         clear_console
          @tsp.nearest_neighbor_tsp(optimal_cost)

@@ -20,59 +20,66 @@ class TSP
     end
   end
 
-  def brute_force_tsp
-    nodes = (0...@nodes_quantity).to_a      
+  def brute_force_tsp(iteration_limit)
+    nodes = (0...@nodes_quantity).to_a
     nodes_permutations = nodes.permutation
-    
+
     optimal_cost = Float::INFINITY
     optimal_path = []
-    time = nil
-    
-    begin
-      Timeout.timeout(600) do
-        time = Benchmark.realtime do
-          nodes_permutations.each do |path|
-            cost = calculate_path(path)
-            if cost < optimal_cost
-              optimal_cost = cost
-              optimal_path = path
-            end
-          end
+    execution_time = nil
+
+    iteration_count = 0
+    time_exceeded_flag = false
+
+    execution_time = Benchmark.realtime do
+      nodes_permutations.each do |path|
+        if iteration_count == iteration_limit
+          time_exceeded_flag = true
+          break
         end
+
+        cost = calculate_path(path)
+        if cost < optimal_cost
+          optimal_cost = cost
+          optimal_path = path
+        end
+
+        iteration_count += 1
       end
-    rescue Timeout::Error
-      puts "Tempo limite de execução atingido (10 minutos)."
-      return
     end
-    
-    print_results(optimal_path, optimal_cost, time)
-    { path: optimal_path, cost: optimal_cost }
-  end
 
-  def nearest_neighbor_tsp(optimal_cost)
-  unvisited_nodes = (0...@nodes_quantity).to_a
-
-  starting_node = unvisited_nodes.sample
-  current_node = starting_node
-  unvisited_nodes.delete(starting_node)
-
-  path = [current_node]
-  
-  time = Benchmark.realtime do
-    while unvisited_nodes.any?
-      nearest_node = find_nearest_neighbor(current_node, unvisited_nodes)
-      path << nearest_node
-      unvisited_nodes.delete(nearest_node)
-      current_node = nearest_node
+    if time_exceeded_flag
+      estimate_execution_time(execution_time, iteration_limit, nodes_permutations.size)
+    else
+      print_results(optimal_path, optimal_cost, execution_time)
+      { path: optimal_path, cost: optimal_cost }
     end
   end
-  
-  cost = calculate_path(path)
-  path << starting_node
-  print_results(path, cost, time, optimal_cost)
 
-  { path: path, cost: cost, time: time }
-end
+  # def estimate_execution_time(execution_time, iteration_limit, total_permutations)
+  #   estimated_time = ((total_permutations / iteration_limit) * execution_time)
+  #   puts "Tempo estimado de execução (segunods): #{estimated_time.round(2)}"
+  #   puts "Tempo estimado de execução (minutos): #{(estimated_time / 60).round(2)}"
+  #   puts "Tempo estimado de execução (horas): #{(estimated_time / 3600).round(2)}"
+  #   puts "Tempo estimado de execução (dias): #{(estimated_time / (3600 * 24)).round(2)}"
+  #   estimated_time
+  # end
+
+  def estimate_execution_time(execution_time, iteration_limit, total_permutations)
+    completed_iterations = iteration_limit
+    remaining_iterations = total_permutations - completed_iterations
+
+    time_per_iteration = execution_time / completed_iterations
+    estimated_remaining_time = remaining_iterations * time_per_iteration
+
+    puts "Estimated remaining time (seconds): #{estimated_remaining_time.round(2)}"
+    puts "Estimated remaining time (minutes): #{(estimated_remaining_time / 60).round(2)}"
+    puts "Estimated remaining time (hours): #{(estimated_remaining_time / 3600).round(2)}"
+    puts "Estimated remaining time (days): #{(estimated_remaining_time / (3600 * 24)).round(2)}"
+    puts "Estimated remaining time (months): #{(estimated_remaining_time / (3600 * 24 * 30)).round(2)}"
+
+  estimated_remaining_time
+  end
   
   def print_graph
     puts "------------------------"
@@ -82,60 +89,85 @@ end
     puts "------------------------"
   end
   
-  def prim(starting_node)
-    mst = []      
-    visited = []   
-    queue = []    
+  def prim(starting_node = 0)
+    mst = []
+    visited_nodes = [starting_node]
+    
+    # vai sempre pegar a smallest aresta conectada a un nó que ainda n foi visitado
+    while visited_nodes.length != @nodes_quantity
+      min_path_weight = Float::INFINITY
+      min_path = nil 
+      
+      #pra cada nó visitado tenho que achar a smallest aresta
+      visited_nodes.each do |node|
+        @graph[node].each_with_index do |weight, connected_node|  #iterando pela linha do nó visitado
+          puts "Nó: #{node}  -- #{weight} --  Nó: #{connected_node} "
+          next if visited_nodes.include?(connected_node) || weight == 0
+          
+          if weight < min_path_weight
+            min_path_weight = weight
+            min_path = {start_node: node, end_node: connected_node, weight: weight}
+          end
+        end
+      end
+      
+      mst << min_path
+      visited_nodes << min_path[:end_node]
+    end
+    
+    print_mst(mst)
+    return mst
+  end
 
-    queue.push({ node: start, weight: 0 }) 
-
-    while !queue.empty?
-      queue.sort_by! { |path| path[:weight] }  
-
-      min_path = queue.shift                   
-      current_node_key = min_path[:node]
-      current_node_weight = min_path[:weight]
-
-      next if visited.include?(current_node_key)  # ja foi visitado? sai
-      visited.push(current_node_key)
-
-      mst.push(current_node_key)         
-
-      @graph[current_node_key].each_with_index do |weight, neighbor|
-        next if weight.zero? || visited.include?(neighbor)
-
-        queue.push({ node: neighbor, weight: weight })
+  def approx_tsp_tour(starting_node = 0, optimal_cost = nil)
+    dfs_tour = nil
+    mst = nil 
+    approximated_cost = nil
+    
+    time = Benchmark.realtime do
+      mst = prim(starting_node)
+      dfs_tour = dfs(mst, starting_node)
+  
+      approximated_cost = calculate_path(dfs_tour)
+      dfs_tour << starting_node
+    end
+  
+    print_results(dfs_tour, approximated_cost, time, optimal_cost)
+  end
+  
+  def dfs(mst, starting_node)
+    stack = [starting_node]
+    visited_nodes = []
+    
+    while stack.length > 0
+      current_node = stack.pop
+      
+      unless visited_nodes.include?(current_node) 
+        visited_nodes << current_node
+        
+        mst.each do |path|
+          if path[:start_node] == current_node && !visited_nodes.include?(path[:end_node])
+            stack.push(path[:end_node])
+          elsif path[:end_node] == current_node && !visited_nodes.include?(path[:start_node])
+            stack.push(path[:start_node])
+          end
+        end
       end
     end
-
-    cost = calculate_path(mst)
-    { mst_path: mst, cost: cost }
+    
+    visited_nodes 
   end
   
-  def tsp_path(staring_node = 0)
-    mst_response = prim(starting_node)
-    mst_reponse[:mst_path] << staring_node 
-  end
+  private
   
-  def average_nearest_neighbor_tsp(n)
-    total_cost = 0
-    total_time = 0
-  
-    n.times do |i|
-      puts "Run #{i + 1}:"
-      result = nearest_neighbor_tsp(nil)
-      total_cost += result[:cost]
-      total_time += result[:time]
-      puts "------------------------"
+  def print_mst(mst)
+    puts "= MST ="
+    mst.each do |edge|
+      puts "Edge: #{edge[:start_node]} - #{edge[:end_node]}, Weight: #{edge[:weight]}"
     end
-  
-    average_cost = total_cost / n
-    average_time_ms = (total_time / n * 1000).round(5)
-    puts "Average Cost: #{average_cost}"
-    puts "Average Execution Time: #{average_time_ms} milliseconds"
-    { average_cost: average_cost, average_time: average_time_ms }
   end
   
+ 
   def print_results(path, cost, time, optimal_cost = nil)
     puts " "
     puts " "
@@ -147,13 +179,8 @@ end
       puts "#{ratio.round(2)}-aproximado"
     end
     puts " "
-    
   end
   
-  private
-  
-
-
   def calculate_path(path)
     total_cost = 0
 
@@ -180,6 +207,51 @@ end
     
     nearest_node
   end
+  
+  def nearest_neighbor_tsp(optimal_cost)
+    unvisited_nodes = (0...@nodes_quantity).to_a
+
+    starting_node = unvisited_nodes.sample
+    current_node = starting_node
+    unvisited_nodes.delete(starting_node)
+
+    path = [current_node]
+    
+    time = Benchmark.realtime do
+      while unvisited_nodes.any?
+        nearest_node = find_nearest_neighbor(current_node, unvisited_nodes)
+        path << nearest_node
+        unvisited_nodes.delete(nearest_node)
+        current_node = nearest_node
+      end
+    end
+  
+    cost = calculate_path(path)
+    path << starting_node
+    print_results(path, cost, time, optimal_cost)
+
+    { path: path, cost: cost, time: time }
+  end
+  
+   
+  def average_nearest_neighbor_tsp(n)
+    total_cost = 0
+    total_time = 0
+  
+    n.times do |i|
+      puts "Run #{i + 1}:"
+      result = nearest_neighbor_tsp(nil)
+      total_cost += result[:cost]
+      total_time += result[:time]
+      puts "------------------------"
+    end
+  
+    average_cost = total_cost / n
+    average_time_ms = (total_time / n * 1000).round(5)
+    puts "Average Cost: #{average_cost}"
+    puts "Average Execution Time: #{average_time_ms} milliseconds"
+    { average_cost: average_cost, average_time: average_time_ms }
+  end
     
   def get_distance_between_two_nodes(first_node, second_node) 
     return @graph[first_node][second_node]
@@ -187,6 +259,7 @@ end
   
 end
 
-# tsp = TSP.new 
-# tsp.read_file("./TSP/resources/tsp2_1248.txt")
-# tsp.average_nearest_neighbor_tsp(50000)
+tsp = TSP.new 
+tsp.read_file("./TSP/resources/tsp1_253.txt")
+# tsp.approx_tsp_tour(0, 1248)
+tsp.brute_force_tsp(1000000)
