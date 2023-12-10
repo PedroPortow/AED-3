@@ -47,9 +47,8 @@ class Execution
     loop do
       puts "Escolha uma opção para resolver o TSP de custo ótimo #{optimal_cost}:"
       puts "1. Força Bruta"
-      puts "2. Aproximativo"
-      puts "3. Rodar aproximativo 50.000 vezes"
-      puts "4. Voltar ao menu principal"
+      puts "2. Aproximativo (approx_tsp_tour)"
+      puts "3. Voltar ao menu principal"
 
       tsp_choice = gets.chomp
 
@@ -59,10 +58,8 @@ class Execution
         @tsp.brute_force_tsp(1000000)
       when '2'
         clear_console
-         @tsp.nearest_neighbor_tsp(optimal_cost)
+         @tsp.approx_tsp_tour(0, optimal_cost)
       when '3'
-        @tsp.average_nearest_neighbor_tsp(50000)
-      when '4'
         break
       else
         puts "Opção inválida"

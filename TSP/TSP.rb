@@ -20,7 +20,7 @@ class TSP
     end
   end
 
-  def brute_force_tsp(iteration_limit)
+  def brute_force_tsp(iteration_limit = 100000000)
     nodes = (0...@nodes_quantity).to_a
     nodes_permutations = nodes.permutation
 
@@ -56,30 +56,15 @@ class TSP
     end
   end
 
-  # def estimate_execution_time(execution_time, iteration_limit, total_permutations)
-  #   estimated_time = ((total_permutations / iteration_limit) * execution_time)
-  #   puts "Tempo estimado de execução (segunods): #{estimated_time.round(2)}"
-  #   puts "Tempo estimado de execução (minutos): #{(estimated_time / 60).round(2)}"
-  #   puts "Tempo estimado de execução (horas): #{(estimated_time / 3600).round(2)}"
-  #   puts "Tempo estimado de execução (dias): #{(estimated_time / (3600 * 24)).round(2)}"
-  #   estimated_time
-  # end
-
   def estimate_execution_time(execution_time, iteration_limit, total_permutations)
-    completed_iterations = iteration_limit
-    remaining_iterations = total_permutations - completed_iterations
-
-    time_per_iteration = execution_time / completed_iterations
-    estimated_remaining_time = remaining_iterations * time_per_iteration
-
-    puts "Estimated remaining time (seconds): #{estimated_remaining_time.round(2)}"
-    puts "Estimated remaining time (minutes): #{(estimated_remaining_time / 60).round(2)}"
-    puts "Estimated remaining time (hours): #{(estimated_remaining_time / 3600).round(2)}"
-    puts "Estimated remaining time (days): #{(estimated_remaining_time / (3600 * 24)).round(2)}"
-    puts "Estimated remaining time (months): #{(estimated_remaining_time / (3600 * 24 * 30)).round(2)}"
-
-  estimated_remaining_time
+    estimated_time = ((total_permutations / iteration_limit) * execution_time)
+    puts "Tempo estimado de execução (segundos): #{estimated_time.round(2)}"
+    puts "Tempo estimado de execução (minutos): #{(estimated_time / 60).round(2)}"
+    puts "Tempo estimado de execução (horas): #{(estimated_time / 3600).round(2)}"
+    puts "Tempo estimado de execução (dias): #{(estimated_time / (3600 * 24)).round(2)}"
+    estimated_time
   end
+
   
   def print_graph
     puts "------------------------"
@@ -93,14 +78,12 @@ class TSP
     mst = []
     visited_nodes = [starting_node]
     
-    # vai sempre pegar a smallest aresta conectada a un nó que ainda n foi visitado
     while visited_nodes.length != @nodes_quantity
       min_path_weight = Float::INFINITY
       min_path = nil 
       
-      #pra cada nó visitado tenho que achar a smallest aresta
       visited_nodes.each do |node|
-        @graph[node].each_with_index do |weight, connected_node|  #iterando pela linha do nó visitado
+        @graph[node].each_with_index do |weight, connected_node| 
           puts "Nó: #{node}  -- #{weight} --  Nó: #{connected_node} "
           next if visited_nodes.include?(connected_node) || weight == 0
           
@@ -166,7 +149,6 @@ class TSP
       puts "Edge: #{edge[:start_node]} - #{edge[:end_node]}, Weight: #{edge[:weight]}"
     end
   end
-  
  
   def print_results(path, cost, time, optimal_cost = nil)
     puts " "
@@ -233,7 +215,6 @@ class TSP
     { path: path, cost: cost, time: time }
   end
   
-   
   def average_nearest_neighbor_tsp(n)
     total_cost = 0
     total_time = 0
@@ -258,8 +239,3 @@ class TSP
   end
   
 end
-
-tsp = TSP.new 
-tsp.read_file("./TSP/resources/tsp1_253.txt")
-# tsp.approx_tsp_tour(0, 1248)
-tsp.brute_force_tsp(1000000)
